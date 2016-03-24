@@ -31,7 +31,7 @@ function createLoops() {
 	test $_neededLoops -gt 256 && echo "Unable to create $_neededLoops loopback devices, 256 is the hard-coded limit!" 1>&2 && exit 6
 
 	echo "Detected $_availableLoops loopback devices on this system."
-	if [ $_availableLoops -le $_neededLoops ]; then
+	if [ $_neededLoops -gt $_availableLoops ]; then
 		echo "System needs $_neededLoops loopback devices."
 		for _node in $(seq $_availableLoops $(( $_neededLoops - 1 )) ); do 
 			if [ ! -b "/dev/loop${_node}" ] && [ "$_test" == "0" ]; then
