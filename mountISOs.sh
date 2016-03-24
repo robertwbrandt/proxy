@@ -13,9 +13,11 @@ _this_rc=/usr/local/bin/mountISOs
 
 [ ! -r "$_brandt_utils" ] && echo "Unable to find required file: $_brandt_utils" 1>&2 && exit 6
 if [ ! -r "$_this_conf" ]; then
-	( echo -e "#     Configuration file for DHCP wrapper startup script"
+	( echo -e "#     Configuration file for mountISOs script"
 	  echo -e "#     Bob Brandt <projects@brandt.ie>\n#"
-   	  echo -e "_dhcpd_sysconfig=/etc/sysconfig/dhcpd" ) > "$_this_conf"
+	  echo -e "_repoBase='/repository'"
+	  echo -e "_optionsISO='auto,ro,user,loop,uid=www-data,gid=www-data'"
+	  echo -e "_optionsBIND='bind'" ) > "$_this_conf"
 	echo "Unable to find required file: $_this_conf" 1>&2
 fi
 
@@ -100,7 +102,13 @@ shift 1
 # Check to see if user is root, if not re-run script as root.
 brandt_amiroot || { echo "${BOLD_RED}This program must be run as root!${NORMAL}" >&2 ; sudo "$0" $_args ; exit $?; }
 
-[ ! -r "$_this_list" ] && echo "Unable to find required file: $_this_list" 1>&2 && exit 6
+if [ ! -r "$_this_list" ]; then
+	( echo -e "# Configuration file for mountISOs.sh"
+	  echo -e "#"
+	  echo -e "# ISO File Name (Relative path)\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tMount Location"
+	  echo -e "#-------------------------------------------------------------------------------------------------------------------------------------\n" ) > "$_this_list"
+	echo "Unable to find required file: $_this_list" 1>&2 && exit 6
+fi
 
 count=$( grep -v '^[# ]' "$_this_list" | sed '/^$/d' | wc -l )
 
