@@ -32,12 +32,12 @@ function createLoops() {
 	if [ $_availableLoops -le $_neededLoops ]; then
 		echo "System needs $_neededLoops loopback devices."
 		for _node in $(seq $_availableLoops $_neededLoops ); do 
-			if ! test -b /dev/loop${_node}; then
-				test "$_test" -eq "0" && echo mknod -m 660 /dev/loop${_node} b 7 ${_node}
+			if [ ! -b "/dev/loop${_node}" ] && [ "$_test" == "0" ]; then
+				echo mknod -m 660 "/dev/loop${_node}" b 7 ${_node}
+				echo chown root:disk "/dev/loop${_node}"
 			fi
 		done
-		if [ "$_test" -eq "0" ]; then
-			echo chown root:disk /dev/loop*
+		if [ "$_test" == "0" ]; then
 			echo "options loop max_loop=$_neededLoops" > /etc/modprobe.d/loop
 			echo modprobe loop
 		fi
