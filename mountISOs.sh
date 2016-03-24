@@ -17,7 +17,7 @@ if [ ! -r "$_this_conf" ]; then
 	  echo -e "#     Bob Brandt <projects@brandt.ie>\n#"
 	  echo -e "_repoBase='/repository'"
 	  echo -e "_optionsISO='auto,ro,user,loop,uid=www-data,gid=www-data'"
-	  echo -e "_optionsBIND='bind'" ) > "$_this_conf"
+	  echo -e "_optionsBIND='bind,ro'" ) > "$_this_conf"
 	echo "Unable to find required file: $_this_conf" 1>&2
 fi
 
