@@ -44,9 +44,9 @@ function createLoops() {
 			echo "options loop max_loop=$_neededLoops" > /etc/modprobe.d/loop
 			modprobe loop
 			if [ -f "/etc/default/grub" ] && [ -x "/usr/sbin/update-grub2" ]; then
-				GRUB_CMDLINE_LINUX_DEFAULT=$( sed -n 's|^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"|\1|p' /etc/default/grub )
-				GRUB_CMDLINE_LINUX_DEFAULT=$( echo $GRUB_CMDLINE_LINUX_DEFAULT | tr " " "\n" | grep -v "^max_loop=" | tr "\n" " " )
-				GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT max_loop=$_neededLoops"
+				GRUB_CMDLINE_LINUX_DEFAULT=$( trim $( sed -n 's|^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"|\1|p' /etc/default/grub ) )
+				GRUB_CMDLINE_LINUX_DEFAULT=$( trim $( echo $GRUB_CMDLINE_LINUX_DEFAULT | tr " " "\n" | grep -v "^max_loop=" | tr "\n" " " ) )
+				GRUB_CMDLINE_LINUX_DEFAULT=$( trim "$GRUB_CMDLINE_LINUX_DEFAULT max_loop=$_neededLoops" )
 				sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMDLINE_LINUX_DEFAULT\"|" /etc/default/grub
 				/usr/sbin/update-grub2
 			fi
