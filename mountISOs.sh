@@ -28,6 +28,8 @@ function createLoops() {
 	local -i _neededLoops=${1:-8}
 	local -i _availableLoops=$( ls -l /dev/loop* | sed -n "s|^b.*/dev/loop[0-9]*$|&|p" | wc -l )
 
+	test $_neededLoops -gt 256 && echo "Unable to create $_neededLoops loopback devices, 256 is the hard-coded limit!" 1>&2 && exit 6
+
 	echo "Detected $_availableLoops loopback devices on this system."
 	if [ $_availableLoops -le $_neededLoops ]; then
 		echo "System needs $_neededLoops loopback devices."
@@ -41,6 +43,13 @@ function createLoops() {
 			echo "Reloading the loopback module so the kernel sees the additional loopback devices!" 2>&1
 			echo "options loop max_loop=$_neededLoops" > /etc/modprobe.d/loop
 			modprobe loop
+			if [ -f "/etc/default/grub" ] && [ -x "/usr/sbin/update-grub2" ]; then
+				GRUB_CMDLINE_LINUX_DEFAULT=$( sed -n 's|^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"|\1|p' /etc/default/grub )
+				GRUB_CMDLINE_LINUX_DEFAULT=$( echo $GRUB_CMDLINE_LINUX_DEFAULT | tr " " "\n" | grep -v "^max_loop=" | tr "\n" " " )
+				GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT max_loop=$_neededLoops"
+				sed -i "s|^GRUB_CMDLINE_LINUX_DEFAULT=.*|GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMDLINE_LINUX_DEFAULT\"|" /etc/default/grub
+				/usr/sbin/update-grub2
+			fi
 		fi
 	fi
 }
