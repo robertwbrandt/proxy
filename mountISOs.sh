@@ -33,13 +33,14 @@ function createLoops() {
 		echo "System needs $_neededLoops loopback devices."
 		for _node in $(seq $_availableLoops $_neededLoops ); do 
 			if [ ! -b "/dev/loop${_node}" ] && [ "$_test" == "0" ]; then
-				echo mknod -m 660 "/dev/loop${_node}" b 7 ${_node}
-				echo chown root:disk "/dev/loop${_node}"
+				echo "Creating loopback device /dev/loop${_node}" 2>&1
+				mknod -m 660 "/dev/loop${_node}" b 7 ${_node} && chown root:disk "/dev/loop${_node}"
 			fi
 		done
 		if [ "$_test" == "0" ]; then
+			echo "Reloading the loopback module so the kernel sees the additional loopback devices!" 2>&1
 			echo "options loop max_loop=$_neededLoops" > /etc/modprobe.d/loop
-			echo modprobe loop
+			modprobe loop
 		fi
 	fi
 }
@@ -102,10 +103,9 @@ if [ ! -r "$_this_list" ]; then
 fi
 
 count=$( grep -v '^[# ]' "$_this_list" | sed '/^$/d' | wc -l )
-
 echo "Mounting $count ISOs/Binds."
-
 createLoops $count
+
 _IFSOLD="$IFS"
 IFS=$'\n'
 for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
@@ -115,19 +115,22 @@ for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
 	_extension=$( lower "${_file:(-4)}" )
 
 	if [ ! -d "$_location" ]; then
-		echo mkdir -p "$_location"
+		echo "Location $_location does not exist, creating it!" 2>&1
+		mkdir -p "$_location"
 	fi
 
 	if [ "$( ls -A $_location 2>&1 )" == "" ]; then
 		if [ "$_extension" == ".iso" ]; then
 			if [ -f "$_repoBase/$_file" ]; then
-				echo mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
+				echo "Mounting $_repoBase/$_file  at  $_location"
+				mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
 			else
 				echo "The ISO file $_repoBase/$_file is not present!" 1>&2				
 			fi
 		else
 			if [ -d "$_repoBase/$_file" ]; then
-				echo mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
+				echo "Mounting $_repoBase/$_file  at  $_location"				
+				mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
 			else
 				echo "The Bind directory $_repoBase/$_file is not present!" 1>&2				
 			fi
