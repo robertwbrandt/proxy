@@ -33,7 +33,7 @@ function createLoops() {
 	echo "Detected $_availableLoops loopback devices on this system."
 	if [ $_availableLoops -le $_neededLoops ]; then
 		echo "System needs $_neededLoops loopback devices."
-		for _node in $(seq $_availableLoops $_neededLoops ); do 
+		for _node in $(seq $_availableLoops $(( $_neededLoops - 1 )) ); do 
 			if [ ! -b "/dev/loop${_node}" ] && [ "$_test" == "0" ]; then
 				echo "Creating loopback device /dev/loop${_node}" 2>&1
 				mknod -m 660 "/dev/loop${_node}" b 7 ${_node} && chown root:disk "/dev/loop${_node}"
