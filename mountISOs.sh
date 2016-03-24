@@ -109,9 +109,9 @@ createLoops $count
 _IFSOLD="$IFS"
 IFS=$'\n'
 for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
-	_file=$( echo "$_line" | sed -n 's|\s\+.*||p' )
-	_location=$( echo "$_line" | sed -n 's|\S*\s\+||p' )
-	_extension=$( lower "${_file:(-4)}" )
+	_file=$( trim $( echo "$_line" | sed -n 's|\s\+.*||p' ) )
+	_location=$( trim $( echo "$_line" | sed -n 's|\S*\s\+||p' ) )
+	_extension=$( trim $( lower "${_file:(-4)}" ) )
 
 	if [ ! -d "$_location" ]; then
 		echo "Location $_location does not exist, creating it!" 2>&1
