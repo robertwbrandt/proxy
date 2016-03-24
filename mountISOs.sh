@@ -111,7 +111,6 @@ IFS=$'\n'
 for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
 	_file=$( echo "$_line" | sed -n 's|\s\+.*||p' )
 	_location=$( echo "$_line" | sed -n 's|\S*\s\+||p' )
-
 	_extension=$( lower "${_file:(-4)}" )
 
 	if [ ! -d "$_location" ]; then
@@ -119,24 +118,30 @@ for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
 		test "$_test" == "0" && mkdir -p "$_location"
 	fi
 
-	if [ "$( ls -A $_location 2>&1 )" == "" ]; then
-		if [ "$_extension" == ".iso" ]; then
-			if [ -f "$_repoBase/$_file" ]; then
-				echo "Mounting $_repoBase/$_file  at  $_location"
-				test "$_test" == "0" && mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
+	if mount | sed -e "s|.* on ||" -e "s| type .*||" | grep "^${_location}$" > /dev/null 2>&1
+	then
+		echo "The location ($_location) is already mounted!"
+		mount 2>/dev/null | grep " on ${_location} type " | sed "s|^|\t|"
+	else
+		if [ ! "$( ls -A $_location 2>&1 )" == "" ]; then
+			echo "The directory $_location is not empty!" 1>&2
+		else			
+			if [ "$_extension" == ".iso" ]; then
+				if [ -f "$_repoBase/$_file" ]; then
+					echo "Mounting $_repoBase/$_file  at  $_location"
+					test "$_test" == "0" && mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
+				else
+					echo "The ISO file $_repoBase/$_file is not present!" 1>&2				
+				fi
 			else
-				echo "The ISO file $_repoBase/$_file is not present!" 1>&2				
-			fi
-		else
-			if [ -d "$_repoBase/$_file" ]; then
-				echo "Mounting $_repoBase/$_file  at  $_location"				
-				test "$_test" == "0" && mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
-			else
-				echo "The Bind directory $_repoBase/$_file is not present!" 1>&2				
+				if [ -d "$_repoBase/$_file" ]; then
+					echo "Mounting $_repoBase/$_file  at  $_location"				
+					test "$_test" == "0" && mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
+				else
+					echo "The Bind directory $_repoBase/$_file is not present!" 1>&2				
+				fi
 			fi
 		fi
-	else
-		echo "The directory $_location is not empty!" 1>&2
 	fi
 done
 IFS="$_IFSOLD"
