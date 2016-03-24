@@ -28,7 +28,6 @@ function createLoops() {
 	local -i _neededLoops=${1:-8}
 	local -i _availableLoops=$( ls -l /dev/loop* | sed -n "s|^b.*/dev/loop[0-9]*$|&|p" | wc -l )
 
-	echo $_test
 	echo "Detected $_availableLoops loopback devices on this system."
 	if [ $_availableLoops -le $_neededLoops ]; then
 		echo "System needs $_neededLoops loopback devices."
@@ -44,14 +43,6 @@ function createLoops() {
 		fi
 	fi
 }
-
-
-
-
-
-
-
-
 
 function setup() {
 	local _status=0	
