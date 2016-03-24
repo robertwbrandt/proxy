@@ -10,6 +10,7 @@ _this_conf=/etc/brandt/mountISOs.conf
 _this_list=/etc/brandt/mountISOs.list
 _this_script=/opt/brandt/proxy/mountISOs.sh
 _this_rc=/usr/local/bin/mountISOs
+_this_init=/etc/init/mountISOs.conf
 
 [ ! -r "$_brandt_utils" ] && echo "Unable to find required file: $_brandt_utils" 1>&2 && exit 6
 if [ ! -r "$_this_conf" ]; then
@@ -57,7 +58,17 @@ function createLoops() {
 function setup() {
 	local _status=0	
 	ln -sf "$_this_script" "$_this_rc" > /dev/null 2>&1
-	_status=$?	
+	_status=$?
+	( echo -e "# mountISOs - Mount  ISO and Bind filesystems"
+	  echo -e "#"
+	  echo -e "# Send mountall the USR1 signal to inform it to try ISO and Bind filesystems"
+	  echo -e "# again."
+	  echo -e '\ndescription	"Mount ISO and Bind filesystems"'
+	  echo -e "\nstart on remote-filesystems"
+	  echo -e "\ntask"
+	  echo -e "\nscript"
+	  echo -e "    /usr/local/bin/mountISOs"
+	  echo -e "end script" ) > "$_this_init"
 	exit $(( $_status | $? ))
 }
 
