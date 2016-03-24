@@ -116,21 +116,21 @@ for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
 
 	if [ ! -d "$_location" ]; then
 		echo "Location $_location does not exist, creating it!" 2>&1
-		mkdir -p "$_location"
+		test "$_test" == "0" && mkdir -p "$_location"
 	fi
 
 	if [ "$( ls -A $_location 2>&1 )" == "" ]; then
 		if [ "$_extension" == ".iso" ]; then
 			if [ -f "$_repoBase/$_file" ]; then
 				echo "Mounting $_repoBase/$_file  at  $_location"
-				mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
+				test "$_test" == "0" && mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
 			else
 				echo "The ISO file $_repoBase/$_file is not present!" 1>&2				
 			fi
 		else
 			if [ -d "$_repoBase/$_file" ]; then
 				echo "Mounting $_repoBase/$_file  at  $_location"				
-				mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
+				test "$_test" == "0" && mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
 			else
 				echo "The Bind directory $_repoBase/$_file is not present!" 1>&2				
 			fi
