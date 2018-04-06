@@ -2,7 +2,7 @@
 #
 #     This script is for mounting large number of ISOs and bind directories
 #     Bob Brandt <projects@brandt.ie>
-# 
+#
 
 _version=1.1
 _brandt_utils=/opt/brandt/common/brandt.sh
@@ -18,7 +18,8 @@ if [ ! -r "$_this_conf" ]; then
 	  echo -e "#     Bob Brandt <projects@brandt.ie>\n#"
 	  echo -e "_repoBase='/repository'"
 	  echo -e "_optionsISO='auto,ro,user,loop,uid=www-data,gid=www-data'"
-	  echo -e "_optionsBIND='bind,ro'" ) > "$_this_conf"
+          echo -e "_optionsBIND='bind,ro'"
+	  echo -e '_optionsArchive="readonly,auto_unmount,allow_other,uid=$( id -u tftp ),gid=$( id -g tftp )"' ) > "$_this_conf"
 	echo "Unable to find required file: $_this_conf" 1>&2
 fi
 
@@ -34,7 +35,7 @@ function createLoops() {
 	echo "Detected $_availableLoops loopback devices on this system."
 	if [ $_neededLoops -gt $_availableLoops ]; then
 		echo "System needs $_neededLoops loopback devices."
-		for _node in $(seq $_availableLoops $(( $_neededLoops - 1 )) ); do 
+		for _node in $(seq $_availableLoops $(( $_neededLoops - 1 )) ); do
 			if [ ! -b "/dev/loop${_node}" ] && [ "$_test" == "0" ]; then
 				echo "Creating loopback device /dev/loop${_node}" 2>&1
 				mknod -m 660 "/dev/loop${_node}" b 7 ${_node} && chown root:disk "/dev/loop${_node}"
@@ -55,8 +56,47 @@ function createLoops() {
 	fi
 }
 
+function mountISO9660() {
+	local _file="$1"
+	local _location="$2"
+
+	if [ -f "$_file" ]; then
+		echo "Mounting $_file at $_location"
+		test "$_test" == "0" && mount -t udf,iso9660 -o "$_optionsISO" "$_file" "$_location"
+	else
+		echo "The ISO file $_file is not present!" 1>&2
+	fi
+	return $?
+}
+
+function mountNone() {
+        local _file="$1"
+        local _location="$2"
+
+        if [ -f "$_file" ]; then
+                echo "Mounting $_file at $_location"
+                test "$_test" == "0" && mount -t none -o "$_optionsBIND" "$_file" "$_location"
+        else
+                echo "The Bind directory $_file is not present!" 1>&2
+        fi
+        return $?
+}
+
+function mountArchive() {
+        local _file="$1"
+        local _location="$2"
+
+        if [ -f "$_file" ]; then
+                echo "Mounting $_file at $_location"
+                test "$_test" == "0" && archivemount -o "$_optionsArchive" "$_file" "$_location"
+        else
+                echo "The Archive $_file is not present!" 1>&2
+        fi
+        return $?
+}
+
 function setup() {
-	local _status=0	
+	local _status=0
 	ln -sf "$_this_script" "$_this_rc" > /dev/null 2>&1
 	_status=$?
 	( echo -e "# mountISOs - Mount  ISO and Bind filesystems"
@@ -117,7 +157,7 @@ brandt_amiroot || { echo "${BOLD_RED}This program must be run as root!${NORMAL}"
 if [ ! -r "$_this_list" ]; then
 	( echo -e "# Configuration file for mountISOs.sh"
 	  echo -e "#"
-	  echo -e "# ISO File Name (Relative path)\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tMount Location"
+	  echo -e "# Type\tFile Name (Relative path)\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tMount Location"
 	  echo -e "#-------------------------------------------------------------------------------------------------------------------------------------\n" ) > "$_this_list"
 	echo "Unable to find required file: $_this_list" 1>&2 && exit 6
 fi
@@ -129,9 +169,16 @@ createLoops $count
 _IFSOLD="$IFS"
 IFS=$'\n'
 for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
-	_file=$( trim $( echo "$_line" | sed -n 's|\s\+.*||p' ) )
-	_location=$( trim $( echo "$_line" | sed -n 's|\S*\s\+||p' ) )
-	_extension=$( trim $( lower "${_file:(-4)}" ) )
+        _type=$( trim $( echo "$_line" | sed -n 's|\s\+.*||p' ) )
+	_file=$( trim $( echo "$_line" | sed -n -e 's|\S\+\s\+||' -e 's|\s\+.*||p' ) )
+
+	_extension=$( echo "$_file" | sed -n 's|.*\.||p' )
+        _extension=$( trim $( lower "$_extension" ) )
+
+	_location=$( trim $( echo "$_line" | sed -n -e 's|\S\+\s\+||' -e 's|\S\+\s\+||p' ) )
+
+	echo "$_type,$_file ($_extension),$_location"
+
 
 	if [ ! -d "$_location" ]; then
 		echo "Location $_location does not exist, creating it!" 2>&1
@@ -145,23 +192,31 @@ for _line in $( grep -v '^[# ]' "$_this_list" | sed '/^$/d' ); do
 	else
 		if [ ! "$( ls -A $_location 2>&1 )" == "" ]; then
 			echo "The directory $_location is not empty!" 1>&2
-		else			
-			if [ "$_extension" == ".iso" ]; then
-				if [ -f "$_repoBase/$_file" ]; then
-					echo "Mounting $_repoBase/$_file  at  $_location"
-					test "$_test" == "0" && mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
-				else
-					echo "The ISO file $_repoBase/$_file is not present!" 1>&2				
-				fi
-			else
-				if [ -d "$_repoBase/$_file" ]; then
-					echo "Mounting $_repoBase/$_file  at  $_location"				
-					test "$_test" == "0" && mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
-				else
-					echo "The Bind directory $_repoBase/$_file is not present!" 1>&2				
-				fi
-			fi
+		else
+			case "$_type" in
+				"iso9660" ) mountISO9660 "$_repoBase/$_file" "$_location" ;;
+				"none"    ) mountNone "$_repoBase/$_file" "$_location" ;;
+				"archive" ) mountArchive "$_repoBase/$_file" "$_location" ;;
+			esac
 		fi
+
+
+
+#			if [ "$_type" == "iso9660" ]; then
+#				if [ -f "$_repoBase/$_file" ]; then
+#					echo "Mounting $_repoBase/$_file  at  $_location"
+#					test "$_test" == "0" && mount -t udf,iso9660 -o "$_optionsISO" "$_repoBase/$_file" "$_location"
+#				else
+#					echo "The ISO file $_repoBase/$_file is not present!" 1>&2
+#				fi
+#			else
+#				if [ -d "$_repoBase/$_file" ]; then
+#					echo "Mounting $_repoBase/$_file  at  $_location"
+#					test "$_test" == "0" && mount -t none -o "$_optionsBIND" "$_repoBase/$_file" "$_location"
+#				else
+#					echo "The Bind directory $_repoBase/$_file is not present!" 1>&2
+#				fi
+#			fi
 	fi
 done
 IFS="$_IFSOLD"
